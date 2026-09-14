@@ -205,3 +205,61 @@ FROM (
 ) d1
 JOIN drivers d2
 ON d1.driver_id = d2.driver_id;
+
+
+-- Using the drivers and deliveries tables from Scenario 2, create one report containing:
+-- • driver_name
+-- • city
+-- • total_delivery_value
+-- • average_delivery_time
+-- • fastest_delivery
+-- • slowest_delivery
+-- • running_delivery_value
+-- • delivery_rank
+
+SELECT d2.driver_name, 
+	   d2.city,
+	   d1.total_delivery_value,
+       d1.avg_delivery_time,
+       d1.fastest_delivery,
+       d1.slowest_delivery,
+       d1.delivery_date,
+       d1.delivery_value,
+       d1.running_delivery_value,
+       d1.delivery_rank
+FROM (
+	SELECT d1.*,
+		SUM(d1.delivery_value) OVER(
+			PARTITION BY d1.driver_id
+		) AS total_delivery_value,
+        
+        AVG(d1.delivery_time_hours) OVER(
+			PARTITION BY d1.driver_id
+        ) AS avg_delivery_time,
+        
+		MIN(d1.delivery_time_hours) OVER(
+			PARTITION BY d1.driver_id
+        ) AS fastest_delivery,
+        
+		MAX(d1.delivery_time_hours) OVER(
+			PARTITION BY d1.driver_id
+        ) AS slowest_delivery,
+        
+        SUM(d1.delivery_value) OVER(
+			PARTITION BY d1.driver_id
+            ORDER BY d1.delivery_date 
+        ) AS running_delivery_value,
+        
+		RANK() OVER(
+			PARTITION BY d1.driver_id
+            ORDER BY d1.delivery_value DESC
+		) AS delivery_rank
+        
+	FROM deliveries d1
+    
+) d1 
+JOIN drivers d2
+ON d1.driver_id = d2.driver_id
+ORDER BY d1.driver_id, d1.delivery_date;
+
+

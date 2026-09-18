@@ -46,7 +46,7 @@ DESCRIBE products;
 
 # QUESTION AND ANSWERS
 
--- I ) FIRST_VALUE()
+-- I) FIRST_VALUE()
 
 -- 1) For every product, display the first product alphabetically by product_name within its product_category.
 
@@ -111,3 +111,81 @@ FROM (
 		) AS cheapest_price
 	FROM products p
 ) p;
+
+-- ------------------------------------------------------------------------------------------------------
+
+-- II) LAST_VALUE()
+
+-- 1) For every product, find the most expensive product_name in its category using LAST_VALUE().
+
+SELECT p.*,
+	LAST_VALUE(p.product_name) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+        RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS most_exp_product
+FROM products p;
+
+-- 2) For every product, display the highest price in its category using LAST_VALUE().
+
+SELECT p.*,
+	LAST_VALUE(p.price) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+        RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS most_high_price
+FROM products p;
+
+-- 3) For every product, calculate how much cheaper it is than the most expensive product in its category.
+
+SELECT x.*,
+	   x.most_exp_product_price,
+	   (x.most_exp_product_price - x.price) AS how_much_cheaper
+FROM (
+SELECT p.*,
+	LAST_VALUE(p.price) OVER(
+		PARTITION BY p.product_category
+		ORDER BY p.price
+        RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS most_exp_product_price
+FROM products p
+) x;
+
+-- 4) For every product, find the last product alphabetically within its category using LAST_VALUE().
+
+SELECT p.*,
+	LAST_VALUE(p.product_name) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.product_name
+        RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS alphabetically_last
+FROM products p;
+
+-- 5) For every Laptop, show the most expensive laptop. Make sure the complete partition is included in the frame.
+
+SELECT p.*,
+	LAST_VALUE(p.product_name) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price 
+        RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS most_exp_laptop
+FROM products p
+WHERE p.product_category = "Laptop";
+
+-- 6) Write two LAST_VALUE() queries: one using the default frame and one using ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING. Compare the results.
+
+SELECT p.*,
+	LAST_VALUE(p.product_name) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+    ) AS default_frame,
+    
+    LAST_VALUE(p.product_name) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS complete_frame
+FROM products p;
+
+# default frame will acts as current row where the current row = resultant row
+# ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING will give last value of the complete partition 

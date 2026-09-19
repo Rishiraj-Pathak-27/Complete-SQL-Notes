@@ -189,3 +189,84 @@ FROM products p;
 
 # default frame will acts as current row where the current row = resultant row
 # ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING will give last value of the complete partition 
+
+-- -----------------------------------------------------------------------------------------------------
+
+-- III) NTH_VALUE()
+
+-- 1) For every product, find the 2nd cheapest product in its category.
+
+SELECT p.*,
+	NTH_VALUE(p.product_name, 2) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS sec_cheapest_product
+FROM products p;
+
+-- 2) For every product, find the 3rd cheapest product in its category.
+
+SELECT p.*,
+	NTH_VALUE(p.product_name, 3) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS third_cheapest_product
+FROM products p;
+
+-- 3) For every product, find the 2nd most expensive product in its category using ORDER BY price DESC.
+
+SELECT p.*,
+	NTH_VALUE(p.product_name, 2) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS sec_most_exp_product
+FROM products p;
+
+-- 4) For Mobile products, display the 3rd most expensive mobile product. Filter Mobile before applying the window function.
+
+SELECT p.*,
+	NTH_VALUE(p.product_name, 3) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS third_most_exp_mobile
+FROM products p
+WHERE p.product_category = "Mobile";
+
+-- 5) For every product, calculate the price difference between the current product and the 2nd most expensive product in its category.
+
+SELECT p.*,
+       (p.price - p.sec_most_exp_price) AS difference
+FROM (
+SELECT p.*,
+	NTH_VALUE(p.price, 2) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS sec_most_exp_price
+FROM products p
+) p;
+
+-- 6) For every product, show the 1st, 2nd and 3rd most expensive product names in its category using three NTH_VALUE() expressions.
+
+SELECT p.*,
+	NTH_VALUE(p.product_name,1) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
+    ) AS first_most_exp_product,
+    
+    NTH_VALUE(p.product_name,2) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+		ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
+    ) AS second_most_exp_product,
+    
+    NTH_VALUE(p.product_name,3) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+		ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
+    ) AS third_most_exp_product
+FROM products p;

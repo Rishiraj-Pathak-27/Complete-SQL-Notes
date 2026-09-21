@@ -252,21 +252,28 @@ FROM products p
 -- 6) For every product, show the 1st, 2nd and 3rd most expensive product names in its category using three NTH_VALUE() expressions.
 
 SELECT p.*,
-	NTH_VALUE(p.product_name,1) OVER(
-		PARTITION BY p.product_category
+	NTH_VALUE(p.product_name,1) OVER w AS first_most_exp_product,
+    NTH_VALUE(p.product_name,2) OVER w AS second_most_exp_product,
+    NTH_VALUE(p.product_name,3) OVER w AS third_most_exp_product
+FROM products p
+WINDOW w AS (
+	PARTITION BY p.product_category
+	ORDER BY p.price DESC
+	ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
+);
+
+
+-- --------------------------------------------------------------------------------------------------
+
+-- IV) NTILE()
+
+-- 1) Divide all products into 3 price buckets using NTILE(3), ordering price from highest to lowest.
+
+SELECT p.*,
+	NTILE(3) OVER(
         ORDER BY p.price DESC
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
-    ) AS first_most_exp_product,
-    
-    NTH_VALUE(p.product_name,2) OVER(
-		PARTITION BY p.product_category
-        ORDER BY p.price DESC
-		ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
-    ) AS second_most_exp_product,
-    
-    NTH_VALUE(p.product_name,3) OVER(
-		PARTITION BY p.product_category
-        ORDER BY p.price DESC
-		ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING 
-    ) AS third_most_exp_product
+    ) AS buckets
 FROM products p;
+
+-- 2) Using the above result, label bucket 1 as Expensive, bucket 2 as Mid Range, and bucket 3 as Cheaper using CASE.
+

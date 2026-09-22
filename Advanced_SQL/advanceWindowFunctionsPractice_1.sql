@@ -277,3 +277,173 @@ FROM products p;
 
 -- 2) Using the above result, label bucket 1 as Expensive, bucket 2 as Mid Range, and bucket 3 as Cheaper using CASE.
 
+SELECT p.*,
+	   CASE WHEN p.buckets = 1 THEN "Expensive"
+			WHEN p.buckets = 2 THEN "Mid Range"
+            WHEN p.buckets = 3 THEN "Cheaper"
+	   END category
+FROM
+(
+	SELECT p.*,
+		NTILE(3) OVER(
+			ORDER BY p.price DESC
+        ) AS buckets
+	FROM products p
+) p;
+
+-- 3) Divide only Mobile products into 3 buckets based on price DESC and label the buckets Expensive Range Phone, Mid Range Phone and Cheaper Range Phone.
+
+SELECT p.*,
+	   CASE WHEN p.buckets = 1 THEN "Expensive"
+			WHEN p.buckets = 2 THEN "Mid Range"
+            WHEN p.buckets = 3 THEN "Cheaper"
+	   END category
+FROM
+(
+	SELECT p.*,
+		NTILE(3) OVER(
+			ORDER BY p.price DESC
+        ) AS buckets
+	FROM products p
+    WHERE p.product_category = "Mobile"
+) p;
+
+-- 4) Divide products into 4 price buckets within each product_category using NTILE(4).
+
+SELECT p.*,
+	NTILE(4) OVER(
+		PARTITION BY p.product_category
+    ) AS buckets
+FROM products p;
+
+-- 5) For each product_category, identify products in the top price quartile (bucket 1 with price DESC).
+
+SELECT p.*
+FROM (
+	SELECT p.*,
+		NTILE(4) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price DESC
+        ) AS buckets
+	FROM products p 
+) p
+WHERE p.buckets = 1;
+
+-- 6) Use NTILE(5) within each category and return product_name, category, price and bucket.
+
+SELECT p.product_name, 
+	   p.product_category,
+       p.price,
+       p.buckets
+FROM (
+	SELECT p.*,
+		NTILE(5) OVER(
+				PARTITION BY p.product_category
+		) AS buckets
+	FROM products p
+) p;
+
+-- ---------------------------------------------------------------------------------
+
+-- V) CUME_DIST()
+
+-- 1) Calculate CUME_DIST() for all products ordered by price ASC.
+
+SELECT p.*,
+	CUME_DIST() OVER(
+		ORDER BY p.price
+    ) AS dist
+FROM products p;
+
+-- 2) Calculate CUME_DIST() for all products ordered by price DESC. Explain how the interpretation changes.
+
+SELECT p.*,
+	CUME_DIST() OVER(
+		ORDER BY p.price DESC
+    ) AS dist
+FROM products p;
+
+-- 3) For Mobile products, calculate CUME_DIST() by price ASC and display it as a percentage.
+
+SELECT p.*,
+	CUME_DIST() OVER(
+		ORDER BY p.price
+    ) AS dist
+FROM products p
+WHERE p.product_category = "Mobile";
+
+-- 4) For every product category, calculate CUME_DIST() by price ASC using PARTITION BY.
+
+SELECT p.*,
+	CUME_DIST() OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+    ) AS dist
+FROM products p;
+
+-- 5) Find products whose CUME_DIST() is 0.50 or less within their category. Use a subquery to filter the window result.
+
+SELECT p.*
+FROM (
+	SELECT p.*,
+		CUME_DIST() OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price
+        ) AS dist
+	FROM products p
+) p
+WHERE p.dist <= 0.50;
+
+-- 6) Within each category, label products as Lower Quarter (<=0.25), Lower-Middle (>0.25 and <=0.50), Upper-Middle (>0.50 and <=0.75), or Upper Quarter (>0.75).
+
+SELECT p.*,
+	   CASE WHEN p.dist <= 0.25 THEN "Lower Quarter"
+		    WHEN p.dist > 0.25 AND p.dist <= 0.50 THEN "Lower-Middle Quarter"
+            WHEN p.dist > 0.50 AND p.dist <= 0.75 THEN "Upper-Middle Quarter"
+            WHEN p.dist > 0.75 THEN "Upper Quarter" 
+	   END category
+FROM (
+	SELECT p.*,
+		CUME_DIST() OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price
+        ) AS dist
+	FROM products p
+) p;
+
+-- -------------------------------------------------------------------------------
+
+-- IV) COMBINED ADVANCED CHALLENGES
+
+-- 1) For every product, show the cheapest product, most expensive product, and current product price within its category using FIRST_VALUE(), LAST_VALUE(), and the current row.
+
+SELECT p.*,
+	FIRST_VALUE(p.price) OVER (
+		PARTITION BY p.product_category
+        ORDER BY p.price
+    ) AS cheapest_product,
+    
+    LAST_VALUE(p.price) OVER (
+		PARTITION BY p.product_category
+		ORDER BY p.price 
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS expensive_product,
+    
+    p.price AS current_price
+FROM products p;
+
+-- 2) For every category, display the 2nd most expensive and 2nd cheapest product using NTH_VALUE().
+
+SELECT p.*,
+	NTH_VALUE(p.product_name,2) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+	) AS sec_most_exp_product,
+    
+    NTH_VALUE(p.product_name,2) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS sec_most_cheapest_product
+FROM products p;

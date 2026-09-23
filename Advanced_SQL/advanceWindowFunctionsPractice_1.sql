@@ -411,7 +411,7 @@ FROM (
 	FROM products p
 ) p;
 
----------------------------------------------------------------------------------
+-- -------------------------------------------------------------------------------
 
 -- IV) COMBINED ADVANCED CHALLENGES
 
@@ -447,3 +447,78 @@ SELECT p.*,
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) AS sec_most_cheapest_product
 FROM products p;
+
+-- 3) For every category, use NTILE(3) and CUME_DIST() based on price DESC. Return both values for every product.
+
+SELECT p.*,
+	NTILE(3) OVER w AS buckets,
+    CUME_DIST() OVER w AS dist
+FROM products p
+WINDOW w AS (
+	PARTITION BY p.product_category
+    ORDER BY p.price DESC
+);
+
+-- 4) For every product, calculate cheapest category price, most expensive category price, current price, and the percentage of the category price range represented by the current product.
+
+SELECT p.*,
+	   (p.current_price - p.most_cheap_price) / 
+       (p.most_exp_price - p.most_cheap_price) * 100
+FROM (
+    SELECT p.*,
+		FIRST_VALUE(p.price) OVER(
+			PARTITION BY p.product_category
+			ORDER BY p.price
+		) AS most_cheap_price,
+    
+		LAST_VALUE(p.price) OVER(
+			PARTITION BY p.product_category
+			ORDER BY p.price
+			ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+		) AS most_exp_price,
+    
+		p.price AS current_price
+	FROM products p
+) p;
+
+-- 5) Create a report with category, product, price, cheapest product, most expensive product, 2nd most expensive product, price bucket, and cumulative distribution.
+
+SELECT p.product_category,
+	   p.product_name, 
+       p.price,
+       p.cheapest_product,
+       p.exp_product,
+       p.sec_most_exp_product,
+       p.buckets,
+       p.dist
+FROM (
+	SELECT p.*,
+		FIRST_VALUE(p.product_name) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price
+        ) AS cheapest_product,
+        
+        LAST_VALUE(p.product_name) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price
+            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+        ) AS exp_product,
+        
+        NTH_VALUE(p.product_name, 2) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price DESC
+            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+        ) AS sec_most_exp_product,
+        
+        NTILE(4) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price DESC
+        ) AS buckets,
+        
+        CUME_DIST() OVER(
+			PARTITION BY p.product_category 
+			ORDER BY p.price
+        ) AS dist
+        
+	FROM products p
+) p;

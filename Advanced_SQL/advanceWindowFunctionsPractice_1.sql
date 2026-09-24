@@ -42,7 +42,7 @@ SELECT * FROM products;
 
 DESCRIBE products;
 
-#-----------------------------------------------------------------------------------------#
+#--------------------------------------------------------------------#
 
 # QUESTION AND ANSWERS
 
@@ -522,3 +522,20 @@ FROM (
         
 	FROM products p
 ) p;
+
+-- 6) Within each category, identify products that are in NTILE(3) bucket 1 and have CUME_DIST() >= 0.67 when ordered by price DESC.
+
+SELECT p.*
+FROM (
+	SELECT p.*,
+		NTILE(3) OVER w AS buckets,
+        CUME_DIST() OVER w AS dist
+	FROM products p
+    WINDOW w AS (
+		PARTITION BY p.product_category
+		ORDER BY p.price DESC
+    )
+) p
+WHERE p.buckets = 1 AND p.dist >= 0.67;
+
+-- 7) 

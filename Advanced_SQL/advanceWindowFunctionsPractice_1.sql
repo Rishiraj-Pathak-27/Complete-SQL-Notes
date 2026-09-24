@@ -538,4 +538,43 @@ FROM (
 ) p
 WHERE p.buckets = 1 AND p.dist >= 0.67;
 
--- 7) 
+-- 7) For each brand, find the cheapest product, most expensive product and 2nd most expensive product.
+
+SELECT p.*,
+	FIRST_VALUE(p.product_name) OVER(
+		PARTITION BY p.brand
+        ORDER BY p.price
+    ) AS cheapest_product,
+    LAST_VALUE(p.product_name) OVER w1 AS exp_product,
+    NTH_VALUE(p.product_name,2) OVER w2 AS sec_most_exp_product
+FROM products p
+WINDOW
+w1 AS (
+	PARTITION BY p.brand
+	ORDER BY p.price
+	ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+),
+w2 AS (
+	PARTITION BY p.brand
+        ORDER BY p.price DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+);
+
+-- 8) Compare NTILE(4) price quartiles with CUME_DIST() within each category. Explain differences when ties exist.
+
+SELECT p.*,
+	NTILE(4) OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+    ) AS buckets,
+    
+    CUME_DIST() OVER(
+		PARTITION BY p.product_category
+        ORDER BY p.price
+	) AS dist
+FROM products p;
+
+-- 9) Build a complete pricing analysis containing category, product, price, cheapest product,
+-- most expensive product, 3rd most expensive product, NTILE(4) price quartile, and CUME_DIST(). Order by
+-- category and price DESC.
+

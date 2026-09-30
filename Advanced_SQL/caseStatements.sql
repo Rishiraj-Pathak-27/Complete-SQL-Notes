@@ -311,9 +311,10 @@ FROM deliveries d;
 
 SELECT d1.driver_id,
 	   d1.driver_name,
-       COUNT(
+       SUM(
 			CASE 
                 WHEN d2.status = 'Delayed' THEN 1
+                ELSE 0
 			END 
        ) AS delayed_deliveries
 FROM drivers d1
@@ -420,3 +421,114 @@ FROM (
 ) d2
 JOIN drivers d1
 ON d1.driver_id = d2.driver_id;
+
+-- -------------------------------------------------------------------------------------------------
+
+# SCENARIO 3 - Warehouse Inventory
+
+-- 1) SCHEMA 1 - Inventory
+
+CREATE TABLE inventory (
+inventory_id INT PRIMARY KEY,
+warehouse VARCHAR(50),
+product VARCHAR(50),
+stock INT,
+stock_value DECIMAL(12,2),
+last_updated DATE
+);
+
+INSERT INTO inventory VALUES
+(301,'Mumbai','Laptop',20,1200000,'2026-01-05'),
+(302,'Mumbai','Phone',50,750000,'2026-01-06'),
+(303,'Mumbai','Tablet',30,450000,'2026-01-07'),
+(304,'Pune','Laptop',15,900000,'2026-01-08'),
+(305,'Pune','Phone',60,900000,'2026-01-09'),
+(306,'Pune','Tablet',25,375000,'2026-01-10'),
+(307,'Nagpur','Laptop',10,600000,'2026-01-11'),
+(308,'Nagpur','Phone',40,600000,'2026-01-12'),
+(309,'Nagpur','Tablet',20,300000,'2026-01-13'),
+(310,'Mumbai','Monitor',25,500000,'2026-01-14'),
+(311,'Pune','Monitor',30,600000,'2026-01-15'),
+(312,'Nagpur','Monitor',15,300000,'2026-01-16');
+
+SELECT * FROM inventory;
+
+DESCRIBE inventory;
+
+-- ----------------------------------------------------------------------------
+
+-- 1) Classify stock as Low (<15), Medium (15–30), or High (>30).
+
+SELECT i.*,
+	   CASE 
+		   WHEN i.stock < 15 THEN 'Low'
+           WHEN i.stock < 30 THEN 'Medium'
+           ELSE 'High'
+	   END stock_classification
+FROM inventory i;
+
+-- 2) Classify stock value as Low (<500000), Medium (500000–800000), or High (>800000).
+
+SELECT i.*,
+	   CASE
+		   WHEN i.stock_value < 500000 THEN 'Low'
+           WHEN i.stock_value < 800000 THEN 'Medium'
+           ELSE 'High'
+	   END stock_value_classification
+FROM inventory i;
+
+-- 3) Create stock_action: Low → Reorder, Medium → Monitor, High → No Action.
+
+SELECT i2.*,
+	   CASE
+		   WHEN i2.stock_classification = 'Low' THEN 'Reorder'
+           WHEN i2.stock_classification = 'Medium' THEN 'Monitor'
+           ELSE 'No Action'
+	   END stock_action
+FROM (SELECT i1.*,
+	   CASE 
+		   WHEN i1.stock < 15 THEN 'Low' 
+           WHEN i1.stock < 30 THEN 'Medium'
+           ELSE 'High'
+	   END stock_classification
+FROM inventory i1 
+) i2;
+
+-- 4) For each warehouse, count Low Stock products using SUM(CASE...).
+
+SELECT i1.warehouse,
+       SUM(CASE
+			   WHEN i1.stock < 15 THEN 1
+               ELSE 0
+		   END) low_stock_value
+FROM inventory i1
+GROUP BY i1.warehouse;
+
+-- 5) For each warehouse, calculate stock value belonging to products with stock <20.
+
+SELECT i1.warehouse,
+SUM(CASE
+		WHEN i1.stock < 20 THEN i1.stock_value
+		ELSE 0
+	END) AS low_stock_value
+FROM inventory i1
+GROUP BY i1.warehouse;
+
+-- 6) Calculate each warehouse's total stock value and percentage contributed by Low Stock products.
+
+SELECT i2.warehouse,
+	   i2.total_stock_value,
+	   (i2.low_stock_value / total_stock_value) * 100 AS contribution
+FROM(
+	SELECT i1.warehouse,
+		SUM(i1.stock_value) AS total_stock_value,
+        SUM(CASE
+                WHEN i1.stock < 20 THEN i1.stock_value
+                ELSE 0
+		    END) low_stock_value
+	FROM inventory i1
+	GROUP BY i1.warehouse
+) i2;
+
+-- 7) Using CASE with a window function, label products as Warehouse Risk when stock <20 and stock_value >500000.
+

@@ -532,3 +532,46 @@ FROM(
 
 -- 7) Using CASE with a window function, label products as Warehouse Risk when stock <20 and stock_value >500000.
 
+-- 8) Create a warehouse report with total products, low-stock products, high-stock products, and health: Critical if low-stock count >=2, Watch if =1, Healthy otherwise.
+
+SELECT i.warehouse,
+	   i.total_products,
+       i.low_stock_product,
+       i.high_stock_product,
+	   CASE
+		   WHEN low_stock_product >= 2 THEN 'Critical'
+		   WHEN low_stock_product = 1 THEN 'Watch'
+		   ELSE 'Healthy'
+	   END health
+FROM (
+		SELECT warehouse,
+			   COUNT(*) AS total_products,
+			   SUM(
+				   CASE
+				       WHEN stock < 20 THEN 1
+                       ELSE 0
+			       END
+               ) low_stock_product,
+               SUM(
+				   CASE
+                       WHEN stock > 50 THEN 1
+                       ELSE 0
+				   END
+			   ) high_stock_product
+		FROM inventory
+        GROUP BY warehouse
+) i;
+
+-- 9) Create custom product priority: Laptop=1, Phone=2, Tablet=3, Monitor=4 and sort within each warehouse.
+
+
+
+
+
+
+
+
+
+
+
+

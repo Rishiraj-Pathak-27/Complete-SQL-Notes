@@ -4,6 +4,12 @@
 -- Return the result table in any order.
 
 
+-- SELECT t.tweet_id AS tweet_id
+-- FROM Tweets t
+-- WHERE LENGTH(t.content) > 15;
+
+-- OR
+
 SELECT t.tweet_id AS tweet_id
 FROM Tweets t
-WHERE LENGTH(t.content) > 15;
+WHERE CHAR_LENGTH(t.content) > 15;

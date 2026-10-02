@@ -532,6 +532,17 @@ FROM(
 
 -- 7) Using CASE with a window function, label products as Warehouse Risk when stock <20 and stock_value >500000.
 
+SELECT i.warehouse,
+	SUM(i.stock_value) OVER(
+		PARTITION BY i.warehouse
+	) AS stock_value_per_warehouse,
+    CASE
+		WHEN i.stock < 20 AND i.stock_value > 500000 THEN 'Warehouse Risk'
+        ELSE 'Normal'
+	END product_health
+FROM inventory i;
+
+
 -- 8) Create a warehouse report with total products, low-stock products, high-stock products, and health: Critical if low-stock count >=2, Watch if =1, Healthy otherwise.
 
 SELECT i.warehouse,
@@ -564,14 +575,41 @@ FROM (
 
 -- 9) Create custom product priority: Laptop=1, Phone=2, Tablet=3, Monitor=4 and sort within each warehouse.
 
+SELECT i.warehouse,
+	   CASE i.product
+		    WHEN 'Laptop' THEN 1
+            WHEN 'Phone' THEN 2
+            WHEN 'Tablet' THEN 3
+            WHEN 'Monitor' THEN 4
+            ELSE 5
+	   END priority
+FROM inventory i
+ORDER BY warehouse;
+       
+-- 10) Final inventory challenge: combine CASE, SUM(), AVG(), and a window function to show warehouse, product, stock,
+-- stock value, warehouse total value, stock-risk label, and product contribution percentage.
 
-
-
-
-
-
-
-
-
-
-
+SELECT i.warehouse,
+       i.product,
+       i.stock,
+       i.stock_value,
+       i.warehouse_total_value,
+       ROUND(i.warehouse_avg_value,2),
+       i.stock_risk_label,
+       ROUND((i.stock_value / i.warehouse_total_value) * 100,4) AS product_contribution
+FROM (
+	SELECT i1.warehouse,
+		   i1.product,
+           i1.stock,
+           i1.stock_value,
+           
+		   SUM(i1.stock_value) OVER w AS warehouse_total_value,
+           AVG(i1.stock_value) OVER w AS warehouse_avg_value,
+           
+           CASE
+				WHEN i1.stock < 20 AND i1.stock_value > 500000 THEN 'Warehouse Risk'
+				ELSE 'Normal'
+			END stock_risk_label
+	FROM inventory i1
+    WINDOW w AS (PARTITION BY i1.warehouse)
+) i;

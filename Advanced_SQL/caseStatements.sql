@@ -613,3 +613,178 @@ FROM (
 	FROM inventory i1
     WINDOW w AS (PARTITION BY i1.warehouse)
 ) i;
+
+
+-- ----------------------------------------------------------------------------------
+
+# SCENARIO 4 - Advanced CASE + Window Functions
+
+-- SCHEMA -  products
+
+CREATE TABLE products (
+product_id INT PRIMARY KEY,
+product_category VARCHAR(50),
+brand VARCHAR(50),
+product_name VARCHAR(100),
+price DECIMAL(10,2)
+);
+
+INSERT INTO products VALUES
+(1, 'Laptop', 'Dell', 'Inspiron 15', 65000),
+(2, 'Laptop', 'HP', 'Pavilion 14', 62000),
+(3, 'Laptop', 'Lenovo', 'IdeaPad Slim 5', 58000),
+(4, 'Laptop', 'Dell', 'Vostro 15', 72000),
+(5, 'Laptop', 'HP', 'Victus 15', 85000),
+(6, 'Mobile', 'Samsung', 'Galaxy A55', 42000),
+(7, 'Mobile', 'Apple', 'iPhone 15', 70000),
+(8, 'Mobile', 'OnePlus', 'OnePlus 13R', 45000),
+(9, 'Mobile', 'Samsung', 'Galaxy S24', 75000),
+(10, 'Mobile', 'Apple', 'iPhone 15 Pro', 125000),
+(11, 'Tablet', 'Samsung', 'Galaxy Tab S9', 55000),
+(12, 'Tablet', 'Apple', 'iPad Air', 60000),
+(13, 'Tablet', 'Lenovo', 'Tab P12', 35000),
+(14, 'Tablet', 'Samsung', 'Galaxy Tab A9', 18000),
+(15, 'Tablet', 'Apple', 'iPad 10th Gen', 45000),
+(16, 'Headphones', 'Sony', 'WH-1000XM5', 30000),
+(17, 'Headphones', 'JBL', 'Tune 770NC', 8500),
+(18, 'Headphones', 'Boat', 'Rockerz 550', 2500),
+(19, 'Headphones', 'Sony', 'WH-CH720N', 12000),
+(20, 'Headphones', 'JBL', 'Live 660NC', 15000),
+(21, 'Monitor', 'LG', 'UltraGear 27', 28000),
+(22, 'Monitor', 'Samsung', 'Odyssey G5', 32000),
+(23, 'Monitor', 'Dell', 'S2721D', 25000),
+(24, 'Monitor', 'LG', 'UltraWide 29', 35000),
+(25, 'Monitor', 'Samsung', 'ViewFinity S6', 40000);
+
+SELECT * FROM products;
+
+DESCRIBE products;
+
+-- ----------------------------------------------------------------------------
+
+-- 1) Use simple CASE to map Laptop → Computing, Mobile → Phones, Tablet → Computing, Headphones → Audio, Monitor → Display.
+
+SELECT p.*,
+	   CASE p.product_category
+            WHEN 'Laptop' THEN 'Computing'
+            WHEN 'Tablet' THEN 'Tablet'
+            WHEN 'Mobile' THEN 'Phones'
+            WHEN 'Headphones' THEN 'Audio'
+            WHEN 'Monitor' THEN 'Display'
+            ELSE 'Unknown' 
+	   END categoryMapping
+FROM products p;
+
+-- 2) Use searched CASE to classify prices into Budget (<20000), Mid Range (20000–59999), Premium (60000–99999), Flagship (>=100000).
+
+SELECT p.*,
+       CASE 
+			WHEN p.price < 20000 THEN 'Budget'
+            WHEN p.price >= 20000 AND p.price <= 59999 THEN 'Mid Range'
+            WHEN p.price >= 60000 AND p.price <= 99999 THEN 'Premium'
+            WHEN p.price >= 100000 THEN 'Flagship'
+            ELSE 'Unknown'
+	   END price_classification
+FROM products p;
+
+-- 3) For every product, show its category's cheapest price using FIRST_VALUE() and a CASE label indicating whether the current product is cheapest.
+
+SELECT p.*,
+       FIRST_VALUE(p.price) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price
+       ) AS cheapest_product,
+       
+       CASE
+		   WHEN p.price = FIRST_VALUE(p.price) OVER(
+				PARTITION BY p.product_category
+                ORDER BY p.price
+           ) THEN 'Cheapest'
+           ELSE 'Not Cheap'
+	   END price_label
+FROM products p;
+
+-- 4) For every category, use LAST_VALUE() to find the most expensive product and label it Category Leader using CASE.
+
+SELECT p.*,
+	   LAST_VALUE(p.price) OVER(
+			PARTITION BY p.product_category
+            ORDER BY p.price
+            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+       ) AS most_exp_product,
+       
+       CASE 
+		   WHEN p.price = LAST_VALUE(p.price) OVER(
+				PARTITION BY p.product_category
+                ORDER BY p.price
+                ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+           ) THEN 'Leader'
+           ELSE 'Spectator'
+	   END exp_label 
+FROM products p;
+
+-- 5) Using NTH_VALUE() for the 2nd most expensive product, create a CASE column showing whether each product is above, equal to, or below the 2nd most expensive price.
+
+SELECT p.*,
+
+       CASE
+           WHEN p.price > p.sec_most_exp_price THEN 'Above'
+           WHEN p.price = p.sec_most_exp_price THEN 'Equal to'
+           WHEN p.price < p.sec_most_exp_price THEN 'Below'
+           ELSE 'Unknown Price Value'
+	   END price_comparison
+FROM (
+	  SELECT p1.*,
+      
+			 NTH_VALUE(p1.product_name,2) OVER(
+				 PARTITION BY p1.product_category
+                 ORDER BY p1.price DESC
+                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+             ) AS sec_most_exp_product,
+             
+             NTH_VALUE(p1.price,2) OVER(
+				 PARTITION BY p1.product_category
+                 ORDER BY p1.price DESC
+                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+             ) AS sec_most_exp_price
+	  FROM products p1
+) p;
+
+-- 6) Use NTILE(4) ordered by price DESC and CASE to label buckets as Top Quartile, Upper-Mid, Lower-Mid, and Bottom Quartile.
+
+SELECT p.*,
+	   CASE p.buckets
+           WHEN 1 THEN 'Top Quartile'
+           WHEN 2 THEN 'Upper-Mid Quartile'
+           WHEN 3 THEN 'Lower-Mid Quartile'
+           WHEN 4 THEN 'Bottom Quartile'
+           ELSE 'Unknown Quartile'
+	   END quartileLabel
+FROM (
+		SELECT p1.*,
+			   NTILE(4) OVER(
+					PARTITION BY p1.product_category
+                    ORDER BY p1.price DESC
+               ) buckets
+		FROM products p1
+) p;
+
+-- 7) Use CUME_DIST() and CASE to label products as Top 25%, 25–50%, 50–75%, or Bottom 25% within each category.
+
+SELECT p.*,
+       CASE 
+           WHEN p.dist >= 75 THEN 'Top 25%'
+           WHEN p.dist > 50 THEN '25-50%'
+           WHEN p.dist > 25 THEN '50-75%'
+           ELSE 'Bottom 25%'
+	   END dist_label
+FROM (
+		SELECT p1.*,
+               CUME_DIST() OVER(
+					PARTITION BY p1.product_category
+                    ORDER BY p1.price DESC
+               )  * 100 AS dist
+		FROM products p1
+) p;
+
+

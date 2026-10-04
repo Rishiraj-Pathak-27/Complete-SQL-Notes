@@ -787,4 +787,29 @@ FROM (
 		FROM products p1
 ) p;
 
+-- 8) Using SUM(CASE...), count Premium/Flagship products for each brand.
+
+SELECT p.*,
+       SUM(
+		   CASE
+			   WHEN p.price_classification IN ('Premium','Flagship') THEN 1
+               ELSE 0
+		   END 
+       ) OVER(
+			PARTITION BY p.brand
+       ) AS brand_count
+FROM (
+	SELECT p1.*,
+       CASE 
+			WHEN p1.price < 20000 THEN 'Budget'
+            WHEN p1.price >= 20000 AND p1.price <= 59999 THEN 'Mid Range'
+            WHEN p1.price >= 60000 AND p1.price <= 99999 THEN 'Premium'
+            WHEN p1.price >= 100000 THEN 'Flagship'
+            ELSE 'Unknown'
+	   END price_classification
+	FROM products p1
+) p;
+
+-- 9) Find brands having at least one product priced >=100000 using HAVING with conditional aggregation.
+
 

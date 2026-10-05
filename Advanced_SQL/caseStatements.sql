@@ -789,7 +789,7 @@ FROM (
 
 -- 8) Using SUM(CASE...), count Premium/Flagship products for each brand.
 
-SELECT p.*,
+SELECT p.brand,
        SUM(
 		   CASE
 			   WHEN p.price_classification IN ('Premium','Flagship') THEN 1
@@ -799,7 +799,7 @@ SELECT p.*,
 			PARTITION BY p.brand
        ) AS brand_count
 FROM (
-	SELECT p1.*,
+	SELECT p1.brand,
        CASE 
 			WHEN p1.price < 20000 THEN 'Budget'
             WHEN p1.price >= 20000 AND p1.price <= 59999 THEN 'Mid Range'
@@ -812,4 +812,57 @@ FROM (
 
 -- 9) Find brands having at least one product priced >=100000 using HAVING with conditional aggregation.
 
+SELECT p.brand,
+       SUM(CASE
+		       WHEN p.price >= 100000 THEN 1
+               ELSE 0
+		   END) price_count
+FROM products p
+GROUP BY p.brand
+HAVING price_count >= 1;
 
+-- 10)  -- Final challenge: create a complete pricing report containing category, brand, product, price, cheapest price, most
+-- expensive price, 3rd most expensive product, NTILE(4) bucket, CUME_DIST(), and a CASE-based price segment.
+
+SELECT p.product_category,
+       p.brand,
+       p.product_name,
+       p.price,
+       p.cheapest_price,
+       p.most_exp_price,
+       p.third_most_exp_product,
+       p.buckets,
+       p.dist,
+       p.price_segment
+FROM (
+	  SELECT p1.*,
+             FIRST_VALUE(p1.price) OVER(
+				PARTITION BY p1.product_category
+                ORDER BY p1.price
+             ) AS cheapest_price,
+             
+             LAST_VALUE(p1.price) OVER w AS most_exp_price,
+             NTH_VALUE(p1.product_name,3) OVER w  AS third_most_exp_product,
+             
+             NTILE(4) OVER w2 AS buckets,
+             CUME_DIST() OVER w2 AS dist,
+             
+             CASE
+                 WHEN p1.price < 20000 THEN 'Budget'
+                 WHEN p1.price >= 20000 AND p1.price <= 59999 THEN 'Mid Range'
+                 WHEN p1.price >= 60000 AND p1.price <= 99999 THEN 'Premium'
+                 WHEN p1.price >= 100000 THEN 'Flagship'
+                 ELSE 'Unknown'
+			 END AS price_segment
+		FROM products p1
+        
+        WINDOW w AS (
+			PARTITION BY p1.product_category
+			ORDER BY p1.price
+			ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+        ),
+        w2 AS (
+			PARTITION BY p1.product_category
+			ORDER BY p1.price DESC
+        )
+)p;

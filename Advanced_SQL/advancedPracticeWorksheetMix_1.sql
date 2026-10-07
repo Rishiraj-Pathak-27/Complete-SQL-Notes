@@ -16,16 +16,18 @@ signup_date DATE
 -- data
 
 INSERT INTO customers VALUES
-(101,'Aarav Mehta','Nagpur','Maharashtra','2025-01-12'),
-(102,'Diya Sharma','Pune','Maharashtra','2025-02-04'),
-(103,'Kabir Patil','Mumbai','Maharashtra','2025-02-20'),
-(104,'Anaya Joshi','Nashik','Maharashtra','2025-03-03'),
-(105,'Rohan Deshmukh','Nagpur','Maharashtra','2025-03-18'),
-(106,'Ishita Kulkarni','Aurangabad','Maharashtra','2025-04-02'),
-(107,'Vivaan Rao','Bengaluru','Karnataka','2025-04-15'),
-(108,'Meera Shah','Ahmedabad','Gujarat','2025-05-01'),
-(109,'Arjun Nair','Kochi','Kerala','2025-05-19'),
-(110,'Sara Khan','Hyderabad','Telangana','2025-06-07');
+(101, 'Aarav Mehta', 'Nagpur', 'Maharashtra', '2025-01-12'),
+(102, 'Diya Sharma', 'Pune', 'Maharashtra', '2025-02-04'),
+(103, 'Kabir Patil', 'Mumbai', 'Maharashtra', '2025-02-20'),
+(104, 'Anaya Joshi', 'Nashik', 'Maharashtra', '2025-03-03'),
+(105, 'Rohan Deshmukh', 'Nagpur', 'Maharashtra', '2025-03-18'),
+(106, 'Ishita Kulkarni', 'Aurangabad', 'Maharashtra', '2025-04-02'),
+(107, 'Vivaan Rao', 'Bengaluru', 'Karnataka', '2025-04-15'),
+(108, 'Meera Shah', 'Ahmedabad', 'Gujarat', '2025-05-01'),
+(109, 'Arjun Nair', 'Kochi', 'Kerala', '2025-05-19'),
+(110, 'Sara Khan', 'Hyderabad', 'Telangana', '2025-06-07'),
+(111, 'Neha Verma', 'Delhi', 'Delhi', '2025-06-15'),
+(112, 'Aditya Singh', 'Jaipur', 'Rajasthan', '2025-06-20');
 
 # 2) products
 
@@ -49,7 +51,12 @@ INSERT INTO products VALUES
 (207, 'Noise Cancelling Headphones', 'Electronics', 9000, 22),
 (208, 'Webcam HD', 'Electronics', 3000, 27),
 (209, 'Notebook Pack', 'Stationery', 500, 100),
-(210, 'Desk Lamp', 'Furniture', 1800, 45);
+(210, 'Desk Lamp', 'Furniture', 1800, 45),
+(211, 'Monitor 24 Inch', 'Electronics', 15000, 16),
+(212, 'Ergonomic Footrest', 'Furniture', 2500, 30),
+(213, 'Bluetooth Speaker', 'Electronics', 4500, 25),
+(214, 'Tablet Stand', 'Accessories', 1800, 40),
+(215, 'Drawing Tablet', 'Electronics', 12000, 8);
 
 # 3) orders
 
@@ -66,22 +73,23 @@ FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
 -- data
 
 INSERT INTO orders VALUES
-(1001, 101, '2025-06-10', 'Delivered', 'UPI', 65000),
-(1002, 102, '2025-06-11', 'Delivered', 'Card', 4700),
-(1003, 103, '2025-06-12', 'Shipped', 'Card', 17500),
-(1004, 101, '2025-06-15', 'Delivered', 'Card', 11600),
-(1005, 104, '2025-06-18', 'Cancelled', 'UPI', 8500),
-(1006, 105, '2025-06-20', 'Delivered', 'Cash', 14000),
-(1007, 106, '2025-06-22', 'Delivered', 'UPI', 2700),
-(1008, 107, '2025-06-25', 'Shipped', 'Card', 9000),
-(1009, 108, '2025-06-28', 'Delivered', 'UPI', 18000),
+(1001, 101, '2025-06-10', 'Delivered',  'UPI', 65000),
+(1002, 102, '2025-06-11', 'Delivered',  'Card', 4700),
+(1003, 103, '2025-06-12', 'Shipped',    'Card', 17500),
+(1004, 101, '2025-06-15', 'Delivered',  'Card', 12400),
+(1005, 104, '2025-06-18', 'Cancelled',  'UPI', 8500),
+(1006, 105, '2025-06-20', 'Delivered',  'Cash', 14000),
+(1007, 106, '2025-06-22', 'Delivered',  'UPI', 2700),
+(1008, 107, '2025-06-25', 'Shipped',    'Card', 9000),
+(1009, 108, '2025-06-28', 'Delivered',  'UPI', 18100),
 (1010, 109, '2025-07-01', 'Processing', 'Card', 3500),
-(1011, 110, '2025-07-03', 'Delivered', 'Card', 9200),
-(1012, 103, '2025-07-04', 'Delivered', 'UPI', 15500),
-(1013, 105, '2025-07-05', 'Cancelled', 'Card', 1200),
-(1014, 107, '2025-07-07', 'Delivered', 'UPI', 16800),
-(1015, 102, '2025-07-08', 'Delivered', 'Card', 3000);
-
+(1011, 110, '2025-07-03', 'Delivered',  'Card', 10200),
+(1012, 103, '2025-07-04', 'Delivered',  'UPI', 16200),
+(1013, 105, '2025-07-05', 'Cancelled',  'Card', 1200),
+(1014, 107, '2025-07-07', 'Delivered',  'UPI', 17000),
+(1015, 102, '2025-07-08', 'Delivered',  'Card', 3000),
+(1016, 101, '2025-07-10', 'Processing', 'UPI', 4500),
+(1017, 110, '2025-07-12', 'Delivered',  'Card', 8000);
 
 # 4) order_items
 
@@ -117,15 +125,17 @@ INSERT INTO order_items VALUES
 (1009, 209, 1, 500),
 (1010, 203, 1, 3500),
 (1011, 207, 1, 9000),
-(1011, 202, 1, 200),
+(1011, 202, 1, 1200),
 (1012, 205, 1, 14000),
-(1012, 206, 1, 1500),
+(1012, 206, 1, 2200),
 (1013, 202, 1, 1200),
 (1014, 205, 1, 14000),
 (1014, 210, 1, 1800),
-(1014, 202, 1, 1000),
-(1015, 208, 1, 3000);
-
+(1014, 202, 1, 1200),
+(1015, 208, 1, 3000),
+(1016, 213, 1, 4500),
+(1017, 213, 1, 4500),
+(1017, 203, 1, 3500);
 
 -- SCHEMAS/TABLE Info
 
@@ -200,3 +210,110 @@ FROM orders o
 JOIN customers c
 ON o.customer_id = c.customer_id
 WHERE c.state = 'Maharashtra';
+
+# 6) Display customer_name, order_id and order_status for all orders that are not cancelled.
+
+SELECT c.customer_name,
+       o.order_id,
+       o.order_status
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.order_status <> 'Cancelled';
+
+# 7) Find all products that have appeared in at least one order.
+
+SELECT p.product_id,
+	   p.product_name
+FROM products p
+JOIN order_items o
+ON p.product_id = o.product_id
+GROUP BY p.product_id, p.product_name
+HAVING COUNT(*) >= 1;
+
+# 8) Find products that have never been ordered.
+
+SELECT p.product_id,
+       oi.order_id
+FROM products p
+LEFT JOIN order_items oi
+ON p.product_id = oi.product_id
+WHERE oi.order_id IS NULL;
+
+# 9) Show each customer with their total number of orders, including customers with zero orders.
+
+SELECT c.customer_id,
+	   c.customer_name,
+       COUNT(o.order_id) AS order_count
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.customer_name;
+
+# 10) Show each product with the total quantity sold. Include products with zero sales.
+
+SELECT p.product_id,
+       p.product_name,
+       p.category,
+       SUM(oi.quantity) AS total_quantity_sold,
+       COALESCE(SUM(oi.quantity),0) AS total_quantity_sold_zero
+FROM products p
+LEFT JOIN order_items oi
+ON p.product_id = oi.product_id
+GROUP BY p.product_id, p.product_name, p.category;
+
+# 11) Find customers who have purchased a product from the Furniture category.
+
+SELECT DISTINCT c.customer_id,
+                p.category
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+JOIN order_items oi
+ON o.order_id = oi.order_id
+JOIN products p
+ON oi.product_id = p.product_id
+WHERE p.category = 'Furniture'
+GROUP BY c.customer_id, p.category;
+
+# 12) Find customers who have purchased both Electronics and Furniture products.
+
+SELECT c.customer_id
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+JOIN order_items oi
+ON o.order_id = oi.order_id
+JOIN products p
+ON oi.product_id = p.product_id
+WHERE p.category IN ('Electronics','Furniture')
+GROUP BY c.customer_id
+HAVING COUNT(DISTINCT p.category) = 2;
+
+# 13) Find the top 5 customers by completed order value using joins and aggregation.
+
+SELECT c.customer_id,
+	   c.customer_name,
+       SUM(o.total_amount) AS total_order_value
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.order_status <> 'Cancelled'
+GROUP BY c.customer_id, c.customer_name
+ORDER BY total_order_value DESC
+LIMIT 5;
+
+# 14) For each category, calculate total sales generated from its order items. Exclude cancelled orders.
+
+SELECT p.category,
+	   SUM(oi.line_total) AS total_sales
+FROM products p
+JOIN order_items oi
+ON p.product_id = oi.product_id
+JOIN orders o
+ON oi.order_id = o.order_id
+WHERE o.order_status <> 'Cancelled'
+GROUP BY p.category;
+
+# 15) Find the order with the highest number of distinct products.
+

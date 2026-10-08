@@ -317,3 +317,82 @@ GROUP BY p.category;
 
 # 15) Find the order with the highest number of distinct products.
 
+SELECT DISTINCT oi.order_id,
+				COUNT(oi.product_id) AS id_count
+FROM order_items oi
+JOIN products p
+ON oi.product_id = p.product_id
+GROUP BY oi.order_id
+ORDER BY id_count DESC
+LIMIT 1;
+
+# 16) For each order, show order_id, customer_name, number of distinct products, total quantity and total_amount.
+
+SELECT o.order_id,
+       c.customer_name,
+	   COUNT(DISTINCT oi.product_id) AS distinct_products,
+       SUM(oi.quantity) AS total_quantity,
+       o.total_amount AS total_amount
+FROM orders o
+LEFT JOIN customers c
+ON o.customer_id = c.customer_id
+LEFT JOIN order_items oi
+ON o.order_id = oi.order_id
+LEFT JOIN products p
+ON oi.product_id = p.product_id
+GROUP BY o.order_id,c.customer_name,o.total_amount;
+
+# 17) Find customers who placed more than one order.
+
+SELECT c.customer_id,
+       c.customer_name,
+       COUNT(o.order_id) AS customer_order_count
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.customer_name
+HAVING customer_order_count > 1;
+
+# 18) Find customers whose every order is cancelled or who have no completed order.
+
+SELECT c.customer_id,
+       c.customer_name,
+       COUNT(o.order_id) AS cust_order_count
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.customer_name
+HAVING SUM(CASE
+               WHEN o.order_status = 'Delivered' THEN 1
+               ELSE 0
+		   END) = 0;
+           
+# 19) Show each state and the number of distinct customers, number of orders, and completed revenue.
+
+SELECT c.state,
+       COUNT(DISTINCT c.customer_id) AS distinct_customers,
+       COUNT(o.order_id) AS total_orders,
+       COALESCE(SUM(CASE
+                        WHEN o.order_status = 'Delivered' THEN o.total_amount
+                        ELSE 0
+					END),0) AS total_amount
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.state;
+
+# 20) Find the product that generated the highest line-item revenue among completed orders.
+
+SELECT p.product_id,
+       SUM(CASE 
+		       WHEN o.order_status = 'Delivered' THEN oi.line_total
+               ELSE 0
+		   END) AS total_line_item
+FROM order_items oi
+JOIN orders o
+ON oi.order_id = o.order_id
+JOIN products p
+ON oi.product_id = p.product_id
+GROUP BY p.product_id
+ORDER BY total_line_item DESC
+LIMIT 1;

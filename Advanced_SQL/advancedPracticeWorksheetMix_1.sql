@@ -396,3 +396,103 @@ ON oi.product_id = p.product_id
 GROUP BY p.product_id
 ORDER BY total_line_item DESC
 LIMIT 1;
+
+-- -------------------------------------------------------------------------------
+
+-- SUBQUERY Bases Questions
+
+-- 1) Find orders whose total_amount is greater than the average order amount across all orders.
+
+SELECT o.*
+FROM orders o
+WHERE o.total_amount > (
+	SELECT AVG(o1.total_amount) 
+	FROM orders o1
+);
+
+-- 2) Find customers whose total completed spending is greater than the average customer completed spending.
+
+SELECT customer_id,
+       customer_name,
+       total_spending
+       
+FROM (
+	SELECT c.customer_id,
+           c.customer_name,
+           SUM(o.total_amount) AS total_spending
+	FROM customers c
+    JOIN orders o
+    ON c.customer_id = o.customer_id
+    WHERE o.order_status = 'Delivered'
+    GROUP BY c.customer_id, c.customer_name
+) AS customer_totals
+
+WHERE total_spending > (
+	SELECT AVG(total_spending) 
+    FROM (
+		SELECT SUM(o1.total_amount) AS total_spending
+        FROM orders o1
+        WHERE o1.order_status = 'Delivered'
+        GROUP BY o1.customer_id 
+    ) AS avg_customer_total
+);
+
+-- 3) Find products priced above the average product price.
+
+SELECT p.*
+FROM products p
+WHERE p.unit_price > (
+	SELECT AVG(p1.unit_price) 
+    FROM products p1
+);
+
+-- 4) Find the most expensive product.
+
+SELECT p.*
+FROM products p
+WHERE p.unit_price = (
+	SELECT MAX(p1.unit_price)
+    FROM products p1
+);
+
+-- 5) Find all customers who have placed at least one order using a subquery with IN.
+
+SELECT c.customer_id,
+       c.customer_name
+FROM customers c
+WHERE c.customer_id IN (
+	SELECT o.customer_id
+    FROM orders o
+);
+
+-- 6) Find customers who have never placed an order using NOT IN.
+
+SELECT c.*
+FROM customers c
+WHERE c.customer_id NOT IN (
+	SELECT o.customer_id
+    FROM orders o
+);
+
+-- 7) Find customers who have placed at least one completed order using EXISTS.
+
+SELECT c.*
+FROM customers c
+WHERE EXISTS (
+	SELECT o.customer_id
+    FROM orders o
+    WHERE o.customer_id = c.customer_id
+          AND o.order_status = 'Delivered'
+);
+
+-- 8) Find products that have never appeared in order_items using NOT EXISTS.
+
+SELECT p.*
+FROM products p
+WHERE NOT EXISTS (
+	SELECT oi.product_id
+    FROM order_items oi
+    WHERE oi.product_id = p.product_id
+);
+
+-- 9) Find orders whose amount is greater than the average order amount for their own customer. Use a correlated subquery.

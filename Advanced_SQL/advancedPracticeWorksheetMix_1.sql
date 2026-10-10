@@ -401,7 +401,7 @@ LIMIT 1;
 
 -- SUBQUERY Bases Questions
 
--- 1) Find orders whose total_amount is greater than the average order amount across all orders.
+# 1) Find orders whose total_amount is greater than the average order amount across all orders.
 
 SELECT o.*
 FROM orders o
@@ -410,7 +410,7 @@ WHERE o.total_amount > (
 	FROM orders o1
 );
 
--- 2) Find customers whose total completed spending is greater than the average customer completed spending.
+# 2) Find customers whose total completed spending is greater than the average customer completed spending.
 
 SELECT customer_id,
        customer_name,
@@ -437,7 +437,7 @@ WHERE total_spending > (
     ) AS avg_customer_total
 );
 
--- 3) Find products priced above the average product price.
+# 3) Find products priced above the average product price.
 
 SELECT p.*
 FROM products p
@@ -446,7 +446,7 @@ WHERE p.unit_price > (
     FROM products p1
 );
 
--- 4) Find the most expensive product.
+# 4) Find the most expensive product.
 
 SELECT p.*
 FROM products p
@@ -455,7 +455,7 @@ WHERE p.unit_price = (
     FROM products p1
 );
 
--- 5) Find all customers who have placed at least one order using a subquery with IN.
+# 5) Find all customers who have placed at least one order using a subquery with IN.
 
 SELECT c.customer_id,
        c.customer_name
@@ -465,7 +465,7 @@ WHERE c.customer_id IN (
     FROM orders o
 );
 
--- 6) Find customers who have never placed an order using NOT IN.
+# 6) Find customers who have never placed an order using NOT IN.
 
 SELECT c.*
 FROM customers c
@@ -474,7 +474,7 @@ WHERE c.customer_id NOT IN (
     FROM orders o
 );
 
--- 7) Find customers who have placed at least one completed order using EXISTS.
+# 7) Find customers who have placed at least one completed order using EXISTS.
 
 SELECT c.*
 FROM customers c
@@ -485,7 +485,7 @@ WHERE EXISTS (
           AND o.order_status = 'Delivered'
 );
 
--- 8) Find products that have never appeared in order_items using NOT EXISTS.
+# 8) Find products that have never appeared in order_items using NOT EXISTS.
 
 SELECT p.*
 FROM products p
@@ -495,4 +495,121 @@ WHERE NOT EXISTS (
     WHERE oi.product_id = p.product_id
 );
 
--- 9) Find orders whose amount is greater than the average order amount for their own customer. Use a correlated subquery.
+# 9) Find orders whose amount is greater than the average order amount for their own customer. Use a correlated subquery.
+
+SELECT o.*
+FROM orders o
+WHERE o.total_amount > (
+	SELECT AVG(o1.total_amount)
+    FROM orders o1
+    WHERE o1.customer_id = o.customer_id
+);
+
+# 10) Find products whose price is greater than the average price of products in the same category.
+
+#	201 	Laptop 						Electronics 	  65000
+#   202 	Wireless Mouse  			Electronics       1200
+#   203 	Mechanical Keyboard 		Electronics		  3500
+#   206 	USB-C Hub					Electronics       2200
+#   207 	Noice Cancelling Headphones Electronics		  9000      AVG = 12822.22 
+#   208 	Webcam HD					Electronics		  3000		so only prod_id = 201 and 211 will pass
+#   211		Monitor 24 Inch				Electronics 	  15000
+#   213		Bluetooth Speaker			Electronics		  4500
+#   215		Drawing Tablet				Electronics		  12000
+
+SELECT p.*
+FROM products p
+WHERE p.unit_price > (
+	SELECT AVG(p1.unit_price)
+    FROM products p1
+    WHERE p1.category = p.category
+);
+
+# 11) Find customers whose latest order amount is greater than their own average order amount.
+
+-- latest order amount
+-- method 1
+SELECT o.customer_id,
+       o.order_date AS max_order_date,
+       o.total_amount AS latest_order_amount
+FROM (
+	SELECT o1.*,
+		   ROW_NUMBER() OVER(
+				PARTITION BY o1.customer_id
+                ORDER BY o1.order_date DESC
+           ) AS rno
+	FROM orders o1
+) o
+WHERE rno = 1;
+
+-- method 2
+
+SELECT o.customer_id,
+       o.order_date,
+       o.total_amount
+FROM orders o
+WHERE o.order_date = (
+	SELECT MAX(o1.order_date)
+    FROM orders o1
+    WHERE o1.customer_id = o.customer_id
+)
+ORDER BY o.customer_id;
+
+-- final query below
+
+SELECT o.*
+FROM orders o
+WHERE o.order_date = (
+	SELECT MAX(o1.order_date)
+    FROM orders o1
+    WHERE o1.customer_id = o.customer_id
+)
+AND o.total_amount > (
+	SELECT AVG(o2.total_amount)
+    FROM orders o2
+    WHERE o2.customer_id = o.customer_id
+);
+
+# 12) Find the second-highest product price without using LIMIT/OFFSET.
+
+SELECT p.unit_price AS sec_max_price
+FROM (
+	SELECT p1.*,
+		   DENSE_RANK() OVER(
+				ORDER BY p1.unit_price DESC
+           ) AS drnk
+	FROM products p1
+) p
+WHERE p.drnk = 2;
+
+# 13) Find the third-highest distinct order amount.
+
+SELECT o.total_amount AS third_max_order_amount
+FROM (
+	SELECT o1.*,
+		   DENSE_RANK() OVER(
+				ORDER BY o1.total_amount DESC
+           ) AS drnk
+	FROM orders o1
+) o
+WHERE o.drnk = 3;
+
+# 14) Find customers who have placed more orders than the average number of orders per customer.
+
+SELECT c.customer_id,
+       COUNT(o.order_id) AS order_count
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id
+HAVING COUNT(o.order_id) > (
+	SELECT AVG(order_count)
+	FROM (
+		SELECT c1.customer_id,
+			   COUNT(o1.order_id) AS order_count
+		FROM customers c1
+        LEFT JOIN orders o1
+        ON c1.customer_id = o1.customer_id
+        GROUP BY c1.customer_id
+    ) o1
+);

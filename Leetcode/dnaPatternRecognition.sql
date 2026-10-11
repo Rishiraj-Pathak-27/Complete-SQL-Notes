@@ -1,7 +1,6 @@
 -- 3475. DNA Pattern Recognition 
 
 -- Biologists are studying basic patterns in DNA sequences. Write a solution to identify sample_id with the following patterns:
-
 -- Sequences that start with ATG (a common start codon)
 -- Sequences that end with either TAA, TAG, or TGA (stop codons)
 -- Sequences containing the motif ATAT (a simple repeated pattern)

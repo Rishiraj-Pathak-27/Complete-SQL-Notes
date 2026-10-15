@@ -14,7 +14,6 @@ signup_date DATE
 );
 
 -- data
-
 INSERT INTO customers VALUES
 (101, 'Aarav Mehta', 'Nagpur', 'Maharashtra', '2025-01-12'),
 (102, 'Diya Sharma', 'Pune', 'Maharashtra', '2025-02-04'),

@@ -572,7 +572,7 @@ AND o.total_amount > (
 
 # 12) Find the second-highest product price without using LIMIT/OFFSET.
 
-SELECT p.unit_price AS sec_max_price
+SELECT p.unit_price AS sec_max_price	
 FROM (
 	SELECT p1.*,
 		   DENSE_RANK() OVER(
@@ -613,3 +613,63 @@ HAVING COUNT(o.order_id) > (
         GROUP BY c1.customer_id
     ) o1
 );
+
+# 15) Find products whose total sold quantity is greater than the average sold quantity across products.
+
+SELECT p.product_id,
+       COALESCE(SUM(oi.quantity),0) AS total_qty
+FROM products p
+LEFT JOIN order_items oi
+ON p.product_id = oi.product_id
+GROUP BY p.product_id
+HAVING total_qty > (
+	SELECT AVG(oi2.total_qty)
+    FROM (
+		SELECT p1.product_id,
+               COALESCE(SUM(oi1.quantity),0) AS total_qty
+		FROM products p1
+        LEFT JOIN order_items oi1
+        ON p1.product_id = oi1.product_id
+        GROUP BY p1.product_id
+    ) AS oi2
+);
+
+# 16) Find the customer(s) who placed the highest-value completed order. 
+
+-- SELECT c.customer_id,
+--        MAX(o.total_amount) AS total_cust_amount
+-- FROM (
+-- 	SELECT c.customer_id,
+--        SUM(o.total_amount) AS total_cust_amount
+-- FROM customers c
+-- LEFT JOIN orders o
+-- ON c.customer_id = o.customer_id
+-- GROUP BY c.customer_id
+-- ) c
+-- LEFT JOIN orders o
+-- ON c.customer_id = o.customer_id
+-- GROUP BY c.customer_id
+-- ORDER BY total_cust_amount DESC
+-- LIMIT 1;
+
+
+SELECT c.customer_id,
+       c.customer_name,
+       o.order_id,
+       o.total_amount
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.order_status = 'Delivered'
+ORDER BY total_amount DESC
+LIMIT 1;
+
+
+
+
+
+
+
+
+
+

@@ -14,6 +14,7 @@ signup_date DATE
 );
 
 -- data
+
 INSERT INTO customers VALUES
 (101, 'Aarav Mehta', 'Nagpur', 'Maharashtra', '2025-01-12'),
 (102, 'Diya Sharma', 'Pune', 'Maharashtra', '2025-02-04'),
@@ -663,12 +664,81 @@ WHERE o.order_status = 'Delivered'
 ORDER BY total_amount DESC
 LIMIT 1;
 
+# 17) Find orders that contain the product with the highest unit price.
 
+SELECT oi.order_id, 
+       p.product_id,
+       p.product_name,
+       p.unit_price
+FROM order_items oi
+LEFT JOIN products p
+ON oi.product_id = p.product_id
+HAVING unit_price = (
+	SELECT MAX(p1.unit_price)
+    FROM products p1
+);
 
+# 18) Find customers who purchased the most expensive product.
 
+SELECT DISTINCT c.customer_id,
+       c.customer_name,
+       COALESCE(p.unit_price,0) AS unit_price 
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+JOIN order_items oi
+ON o.order_id = oi.order_id
+JOIN products p
+ON oi.product_id = p.product_id
+HAVING unit_price = (
+	SELECT MAX(p1.unit_price)
+    FROM products p1
+);
 
+# 19) Find categories whose total completed revenue is above the average category revenue.
 
+SELECT p.category,
+       SUM(oi.line_total) AS total_revenue
+FROM products p
+JOIN order_items oi
+ON p.product_id = oi.product_id
+JOIN orders o
+ON oi.order_id = o.order_id
+WHERE o.order_status = 'Delivered'
+GROUP BY p.category
+HAVING SUM(oi.line_total) > (
+	SELECT AVG(prod.total_revenue)
+    FROM (
+		SELECT p1.category,
+               SUM(oi1.line_total) AS total_revenue
+		FROM products p1
+        JOIN order_items oi1
+        ON p1.product_id = oi1.product_id
+        JOIN orders o1
+        ON oi1.order_id = o1.order_id
+        GROUP BY p1.category
+    ) prod
+);
 
+# 20) Find the highest-spending customer in each state using a correlated subquery or nested aggregation.
 
-
-
+SELECT c.customer_id,
+       c.state,
+	   COALESCE(SUM(o.total_amount),0) AS total_amount
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.state
+HAVING SUM(o.total_amount) = (
+	SELECT MAX(cust.total_amount)
+    FROM (
+		SELECT c1.customer_id,
+               c1.state,
+               COALESCE(SUM(o1.total_amount),0) AS total_amount
+		FROM customers c1
+        LEFT JOIN orders o1
+        ON c1.customer_id = o1.customer_id
+        WHERE c1.state = c.state
+        GROUP BY c1.customer_id, c1.state
+    ) cust
+);

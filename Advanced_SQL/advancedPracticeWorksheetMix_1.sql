@@ -742,3 +742,238 @@ HAVING SUM(o.total_amount) = (
         GROUP BY c1.customer_id, c1.state
     ) cust
 );
+
+-- -----------------------------------------------------------------------------------
+
+-- CASE STATEMENTS
+
+# 1) Display each product with a stock_status: 'Out of Stock', 'Low Stock' for stock_qty < 15, 'Medium Stock' for 15–30, otherwise 'Healthy Stock'.
+
+SELECT p.*,
+       CASE
+           WHEN p.stock_qty = 0 THEN 'Out Of Stock'
+           WHEN p.stock_qty <= 15 AND p.stock_qty <> 0 THEN 'Low Stock'
+           WHEN p.stock_qty <= 30 THEN 'Medium Stock'
+           ELSE 'Healthy Stock'
+	   END stock_status
+FROM products p;
+
+# 2) Classify each order as 'High Value' if total_amount >= 15000, 'Medium Value' if >= 5000, otherwise 'Low Value'.
+
+SELECT o.*,
+       CASE
+           WHEN o.total_amount >= 15000 THEN 'High Value'
+           WHEN o.total_amount >= 5000 THEN 'Medium Value'
+           ELSE 'Low Value'
+	   END amount_label
+FROM orders o;
+
+# 3) Create a payment_type label: UPI, Card, Cash, or Other.
+
+SELECT o.*,
+       CASE
+		   WHEN o.payment_method = 'UPI' THEN 'UPI'
+           WHEN o.payment_method = 'Card' THEN 'Card'
+           WHEN o.payment_method = 'Cash' THEN 'Cash'
+           ELSE 'Other'
+	   END payment_type
+FROM orders o;
+
+# 4) Display customer_name and a customer_region label: Maharashtra vs Other State.
+
+SELECT c.customer_name,
+       c.state,
+	   CASE
+           WHEN c.state = 'Maharashtra' THEN 'Maharashtra'
+           ELSE 'Other State'
+	   END customer_region
+FROM customers c;
+
+
+# 5) For each order, create a revenue_status: Completed, Cancelled, or Pending based on order_status.
+
+SELECT o.*,
+       CASE
+		   WHEN o.order_status = 'Delivered' THEN 'Completed'
+           WHEN o.order_status = 'Cancelled' THEN 'Cancelled'
+           ELSE 'Pending'
+	   END revenue_status
+FROM orders o;
+
+# 6) Calculate an estimated discount: 10% for orders >= 15000, 5% for orders >= 5000, otherwise 0%.
+
+SELECT o.*,
+       CASE
+		   WHEN o.total_amount >= 15000 THEN '10%'
+           WHEN o.total_amount >= 5000 THEN '5%'
+           ELSE '0%'
+	   END discount
+FROM orders o;
+
+# 7) Calculate the final_amount after the estimated discount.
+
+-- discount_amount
+
+SELECT o.*,
+       CASE
+	       WHEN o.total_amount >= 15000 THEN (o.total_amount*0.10)
+           WHEN o.total_amount >= 5000 THEN (o.total_amount*0.05)
+           ELSE 0
+	   END discount_amount
+FROM orders o;
+
+
+-- final_amount
+
+SELECT o.*,
+	   (o.total_amount - o.discount_amount) AS final_amount
+FROM (
+	SELECT o1.*,
+           CASE
+			   WHEN o1.total_amount >= 15000 THEN (o1.total_amount*0.10)
+               WHEN o1.total_amount >= 5000 THEN (o1.total_amount*0.05)
+               ELSE 0
+		   END discount_amount
+	FROM orders o1
+) o;
+
+# 8) Count how many orders fall into each order-value band.
+
+SELECT o1.band,
+       COUNT(
+			CASE
+				WHEN o1.band = 'Low Value' THEN 1
+                WHEN o1.band = 'Medium Value' THEN 1
+                WHEN o1.band = 'High Value' THEN 1
+                ELSE 0
+		    END
+       ) band_count
+FROM (
+SELECT o.*,
+       CASE
+		   WHEN o.total_amount <= 5000 THEN 'Low Value'
+           WHEN o.total_amount < 15000 THEN 'Medium value'
+           ELSE 'High Value'
+	   END band
+FROM orders o
+) o1
+GROUP BY o1.band;
+
+# 9) For each customer, classify them as 'New', 'Regular', or 'VIP' based on completed spending: <5000, 5000–14999, >=15000.
+
+SELECT c.customer_id,
+	   c.customer_name,
+       CASE
+		   WHEN SUM(o.total_amount) < 5000 THEN 'New'
+           WHEN SUM(o.total_amount) < 15000 THEN 'Regular'
+           ELSE 'VIP'
+	   END cust_classification
+FROM customers c
+JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.customer_name;
+
+# 10) Use CASE inside SUM to calculate completed revenue and cancelled revenue separately in one query.
+
+SELECT 
+	   SUM(CASE
+			   WHEN o.order_status = 'Delivered' THEN o.total_amount
+               ELSE 0
+		   END) completed_revenue,
+           
+		SUM(CASE
+				WHEN o.order_status = 'Cancelled' THEN o.total_amount
+                ELSE 0
+			END) cancelled_revenue
+FROM orders o;
+
+# 11) Use CASE inside COUNT to count completed orders and cancelled orders per customer.
+
+SELECT c.customer_id, 
+       c.customer_name,
+	COUNT(
+			CASE
+				WHEN o.order_status = 'Delivered' THEN 1
+			END) completed_count,
+		
+	   COUNT(CASE
+				 WHEN o.order_status = 'Cancelled' THEN 1
+			 END) cancelled_count
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.customer_name;
+
+# 12) Sort products so Electronics appear first, then Furniture, then Stationery, without changing the stored category values.
+
+SELECT p.*,
+	   CASE
+		   WHEN p.order_category = 1 THEN 'Electronics'
+           WHEN p.order_category = 2 THEN 'Furniture'
+           WHEN p.order_category = 3 THEN 'Stationery'
+	   END order_category_name
+FROM (
+	SELECT p1.*,
+	CASE
+		WHEN p1.category = 'Electronics' THEN 1
+		WHEN p1.category = 'Furniture' THEN 2
+		WHEN p1.category = 'Stationery' THEN 3
+	END order_category
+    FROM products p1
+) p;
+
+-- or simple query below
+
+SELECT p.*
+FROM products p
+ORDER BY CASE
+			  WHEN p.category = 'Electronics' THEN 1
+		      WHEN p.category = 'Furniture' THEN 2
+			  WHEN p.category = 'Stationery' THEN 3
+              ELSE 4
+		  END;
+          
+# 13) Create a delivery_priority label: High for high-value non-cancelled orders, Medium for other non-cancelled orders, Low for cancelled orders.
+
+SELECT o.*,
+	   CASE
+		   WHEN o.order_status IN ('Delivered', 'Processing', 'Shipped') AND o.total_amount > 15000 THEN 'High'
+           WHEN o.order_status IN ('Delivered', 'Processing', 'Shipped') THEN 'Medium'
+           WHEN o.order_status = 'Cancelled' THEN 'Low'
+           ELSE 'Unknown'
+	   END delivery_priority
+FROM orders o;
+
+-- OR
+
+SELECT o.*,
+	   CASE
+		   WHEN o.order_status <> 'Cancelled' AND o.total_amount > 15000 THEN 'High'
+           WHEN o.order_status <> 'Cancelled' THEN 'Medium'
+           WHEN o.order_status = 'Cancelled' THEN 'Low'
+           ELSE 'Unknown'
+	   END delivery_priority
+FROM orders o;
+
+# 14) For each state, calculate the number of customers with at least one completed order using CASE.
+
+SELECT c.state,
+	   COUNT(DISTINCT CASE
+			   WHEN o.order_status = 'Delivered' THEN c.customer_id
+		   END) completed_orders
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.state
+HAVING completed_orders >= 1;
+
+# 15) Calculate a stock_risk score: 3 when stock < 10, 2 when stock is 10–19, 1 when stock is 20–30, 0 otherwise.
+
+SELECT p.*,
+	   CASE
+		   WHEN p.stock_qty < 10 THEN 3
+           WHEN p.stock_qty < 20 THEN 2
+           WHEN p.stock_qty <= 30 THEN 1
+           ELSE 0
+	   END stock_risk_score
+FROM products p;

@@ -22,7 +22,6 @@ VALUES
 
 SELECT * FROM student;
 
-
 SELECT name,marks FROM student;
 SELECT * FROM student;
 SELECT DISTINCT city FROM student;

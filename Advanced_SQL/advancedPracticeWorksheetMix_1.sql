@@ -977,3 +977,158 @@ SELECT p.*,
            ELSE 0
 	   END stock_risk_score
 FROM products p;
+
+
+-- ---------------------------------------------------------------------------
+
+-- MATHEMATICAL & AGGREGATE FUNCTION
+
+# 1) Find total gross order value across all orders.
+
+SELECT SUM(o.total_amount) AS total_gross_value
+FROM orders o;
+
+# 2) Find total completed revenue excluding cancelled orders.
+
+SELECT SUM(o.total_amount) AS total_completed_revenue
+FROM orders o
+WHERE o.order_status <> 'Cancelled';
+
+# 3) Find average order value.
+
+SELECT ROUND(AVG(o.total_amount),2) AS avg_order_value
+FROM orders o;
+
+# 4) Find minimum and maximum order amount.
+
+SELECT MIN(o.total_amount) AS min_amount,
+	   MAX(o.total_amount) AS max_amount
+FROM orders o;
+
+# 5) Find the number of unique customers who have placed orders.
+
+SELECT COUNT(DISTINCT o.customer_id) AS unique_customer_count
+FROM orders o;
+
+# 6) Find the number of orders, total quantity and total revenue for each product.
+
+SELECT p.product_id,
+	   COUNT(DISTINCT oi.order_id) AS order_count,	
+	   COALESCE(SUM(oi.quantity),0) AS total_quantity,
+       COALESCE(SUM(oi.line_total),0) AS total_revenue
+FROM products p
+LEFT JOIN order_items oi
+ON p.product_id = oi.product_id
+GROUP BY p.product_id;
+
+# 7) Calculate the average selling price per product from order_items using line_total / quantity.
+
+SELECT p.product_id, 
+	   p.product_name,
+	   COALESCE(AVG(oi.line_total/oi.quantity),0) AS avg_selling_price
+FROM products p
+LEFT JOIN order_items oi
+ON p.product_id = oi.product_id
+GROUP BY p.product_id, p.product_name;
+
+# 8) Calculate each product's revenue contribution percentage of total completed revenue.
+
+-- formula = (products completed revenue / total completed revenue) * 100
+
+SELECT 	   p.product_id,
+		   p.product_name,
+		   SUM(CASE
+			   WHEN o.order_status = 'Delivered' THEN oi.line_total
+               ELSE 0
+		   END) total_complete_revenue,
+		
+		   SUM(CASE
+				WHEN o.order_status = 'Delivered' THEN oi.line_total
+                ELSE 0
+		    END) * 100 /  
+            
+            SUM(SUM(CASE
+					WHEN o.order_status = 'Delivered' THEN oi.line_total
+                    ELSE 0
+			END)) OVER() revenue_contribution_percentage
+            
+FROM products p
+JOIN order_items oi 
+ON p.product_id = oi.product_id
+JOIN orders o
+ON oi.order_id = o.order_id
+GROUP BY p.product_id, p.product_name;
+
+# 9) Calculate each category's revenue contribution percentage of total completed revenue.
+
+SELECT p.category,
+	   SUM(CASE
+			   WHEN o.order_status = 'Delivered' THEN oi.line_total
+               ELSE 0
+		   END) total_completed_revenue,
+		
+	   SUM(CASE
+			   WHEN o.order_status = 'Delivered' THEN oi.line_total
+               ELSE 0
+		   END) * 100 / 
+	   
+       SUM(SUM(CASE
+				   WHEN o.order_status = 'Delivered' THEN oi.line_total
+                   ELSE 0
+			   END)) OVER() AS product_category_contribution
+FROM products p
+JOIN order_items oi
+ON p.product_id = oi.product_id
+JOIN orders o
+ON oi.order_id = o.order_id
+GROUP BY p.category;
+
+# 10) Round each customer's average completed order value to 2 decimal places.
+
+SELECT c.customer_id,
+	   c.customer_name,
+       ROUND(AVG(o.total_amount),2) AS avg_completed_value
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.order_status = 'Delivered'
+GROUP BY c.customer_id, c.customer_name;
+
+# 11) Find the absolute difference between a product's unit_price and its average category price.
+
+SELECT p.product_name,
+	   p.unit_price,
+       p2.avg_category_price,
+	   ABS(p.unit_price - p2.avg_category_price) AS abs_diff
+FROM products p
+JOIN (
+	SELECT p1.category,
+		   ROUND(AVG(p1.unit_price),2) AS avg_category_price
+    FROM products p1
+    GROUP BY p1.category
+) p2
+ON p.category = p2.category;
+
+-- avg category price
+
+SELECT p.category,
+	   ROUND(AVG(p.unit_price),2) AS avg_category_price
+FROM products p
+GROUP BY p.category;
+
+# 12) Calculate the value of current stock for every product as unit_price * stock_qty.
+
+SELECT p.product_id,
+	   (p.unit_price * p.stock_qty) AS current_stock_value
+FROM products p;
+
+# 13) Find the total inventory value across all products.
+
+
+
+
+
+
+
+
+

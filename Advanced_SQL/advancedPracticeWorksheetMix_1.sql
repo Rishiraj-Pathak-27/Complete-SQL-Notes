@@ -151,7 +151,6 @@ DESCRIBE orders;
 SELECT * FROM order_items;
 DESCRIBE order_items;
 
-
 -- -------------------------------------------------------
 
 -- JOIN's

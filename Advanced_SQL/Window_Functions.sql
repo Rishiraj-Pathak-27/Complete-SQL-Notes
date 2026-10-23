@@ -208,7 +208,6 @@ SELECT transaction_id, account_holder, amount,
 	SUM(amount) OVER(PARTITION BY account_holder ORDER BY transaction_date) AS total_count
     FROM bank;
     
-
 ##########################################################################################################################################
     
 # Practice Questions

@@ -21,6 +21,7 @@ SELECT * FROM employee_data;
 
 ##########################################################
 # group by clause
+
 USE collegeTwo;
 
 SELECT city, count(rollno)

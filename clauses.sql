@@ -12,6 +12,7 @@ LIMIT 4;
 
 ########################################################
 # order by claude (asc & des)
+
 SELECT * 
 FROM employee_data
 ORDER BY monthSalary DESC
